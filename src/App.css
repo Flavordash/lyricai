@@ -3,7 +3,7 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f8f9fa;
+  background-color: #ffffff;
 }
 
 header {
@@ -25,7 +25,7 @@ footer {
   color: white;
   text-align: center;
   padding: 1rem 0;
-  position: fixed;
+  position: relative; /* Changed to relative */
   width: 100%;
   bottom: 0;
 }
@@ -59,7 +59,7 @@ form button {
 }
 
 form button:hover {
-  background-color: #555;
+  background-color: #737272;
 }
 
 /* Hero Section Styling */
@@ -69,7 +69,7 @@ form button:hover {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  height: 100vh;
+  min-height: 100vh; /* Ensure it takes at least the full viewport height */
   color: white;
   text-align: center;
   background: url('/src/hero-image.jpeg') no-repeat center center;
@@ -92,12 +92,12 @@ form button:hover {
   padding: 1rem 2rem; /* Increased padding */
   font-size: 1.25rem;
   color: white;
-  background-color: #007bff;
+  background-color: #ad2e9e; /* Custom button color */
   border-radius: 0.5rem;
   text-decoration: none;
   transition: background-color 0.3s ease;
 }
 
 .hero-section a:hover {
-  background-color: #0056b3;
+  background-color: #459957; /* Custom hover color */
 }

@@ -27,7 +27,7 @@ const NavList = styled.ul`
   top: 60px; /* Adjust based on your header height */
   left: 0;
   right: 0;
-  width: 180px; /* Set the width of the dropdown menu */
+  width: 139px; /* Set the width of the dropdown menu */
   background-color: lightgray;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -45,6 +45,7 @@ const NavList = styled.ul`
 
 const NavItem = styled.li`
   margin: 0 1rem; /* Add space between menu items */
+  text-align: left; /* Align text to the left */
   &:before {
     content: "• ";
     color: #333; /* Dot color */

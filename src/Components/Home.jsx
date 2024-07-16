@@ -6,7 +6,7 @@ import '../App.css'; // Ensure this path is correct
 
 const HomeContainer = styled.div`
   text-align: center;
-  padding-bottom: 2rem; /* Add padding to prevent footer overlap */
+  padding-bottom: 5rem; /* Add padding to prevent footer overlap */
 `;
 
 const HeroSection = styled.section`
@@ -15,7 +15,7 @@ const HeroSection = styled.section`
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  height: 100vh;
+  min-height: 100vh; /* Ensure it takes at least the full viewport height */
   color: white;
   text-align: center;
   background: url('/hero-image.jpg') no-repeat center center;
@@ -35,10 +35,10 @@ const Subtitle = styled.p`
 
 const Button = styled(Link)`
   display: inline-block;
-  padding: 1rem 2rem;
+  padding: 1rem 2rem; /* Increased padding */
   font-size: 1.25rem;
   color: white;
-  background-color: #28a745;
+  background-color: #28a745; /* Custom button color */
   border-radius: 0.5rem;
   text-decoration: none;
   transition: background-color 0.3s ease;
