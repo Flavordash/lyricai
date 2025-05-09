@@ -110,6 +110,21 @@ const TextArea = styled.textarea`
   box-sizing: border-box;
 `;
 
+const LyricsDisplay = styled.div`
+  flex: 1;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+  box-sizing: border-box;
+  min-height: 200px;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: 1rem;
+`;
+
 function CreateLyrics() {
   const [bpm, setBpm] = useState('');
   const [theme, setTheme] = useState('');
@@ -118,13 +133,110 @@ function CreateLyrics() {
   const [metre, setMetre] = useState('');
   const [keywords, setKeywords] = useState('');
   const [generatedLyrics, setGeneratedLyrics] = useState('');
+  const [selectedWord, setSelectedWord] = useState('');
 
-  const handleSubmit = (e) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const [replaceLoading, setReplaceLoading] = useState(false);
+  const [replaceError, setReplaceError] = useState('');
+
+  const [highlightInfo, setHighlightInfo] = useState(null);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     
-    setGeneratedLyrics(
-      `Generated Lyrics:\nBPM: ${bpm}\nTheme: ${theme}\nReference: ${reference}\nGenre: ${genre}\nMetre: ${metre}\nKeywords: ${keywords}`
-    );
+    try {
+      // The API endpoint - change to your server address if different
+      const apiUrl = '/generate-lyrics';
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bpm: parseInt(bpm, 10) || 100,
+          theme,
+          referenceArtist: reference,
+          keywords,
+          genre,
+          metre
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate lyrics');
+      }
+      
+      const data = await response.json();
+      setGeneratedLyrics(data.lyrics);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('An error occurred while generating lyrics. Please try again.');
+      setGeneratedLyrics('');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 가사 편집창에서 텍스트 선택 시 선택된 단어 추출
+  const handleSelection = (e) => {
+    const textarea = e.target;
+    const selection = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+    setSelectedWord(selection);
+  };
+
+  // 선택된 단어가 포함된 줄(lineText) 추출 함수
+  const getLineWithSelectedWord = () => {
+    if (!selectedWord) return '';
+    const lines = generatedLyrics.split('\n');
+    return lines.find(line => line.includes(selectedWord)) || '';
+  };
+
+  // AI로 단어 바꾸기 버튼 클릭 시
+  const handleReplaceWord = async () => {
+    if (!selectedWord) return;
+    setReplaceLoading(true);
+    setReplaceError('');
+    const lineText = getLineWithSelectedWord();
+    try {
+      const response = await fetch('/generate-lyrics/replace-word', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalLyrics: generatedLyrics,
+          selectedWord,
+          lineText
+        })
+      });
+      if (!response.ok) throw new Error('Failed to replace word');
+      const data = await response.json();
+      const newWord = data.newWord;
+      // 해당 줄에서 단어 교체
+      const lines = generatedLyrics.split('\n');
+      const newLines = lines.map((line, idx) => {
+        if (line === lineText) {
+          // 교체된 단어의 인덱스 찾기 (첫 번째만)
+          const wordArr = line.split(' ');
+          const wordIdx = wordArr.findIndex(w => w === selectedWord);
+          if (wordIdx !== -1) {
+            wordArr[wordIdx] = newWord;
+            setHighlightInfo({ lineIdx: idx, wordIdx, word: newWord });
+            return wordArr.join(' ');
+          }
+        }
+        return line;
+      });
+      setGeneratedLyrics(newLines.join('\n'));
+      setSelectedWord('');
+    } catch (err) {
+      setReplaceError('AI 단어 교체에 실패했습니다.');
+    } finally {
+      setReplaceLoading(false);
+    }
   };
 
   return (
@@ -205,16 +317,45 @@ function CreateLyrics() {
                 <option value="6/8">6/8</option>
               </Select>
             </FormGroup>
-            <Button type="submit">Generate Lyrics</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Generating...' : 'Generate Lyrics'}
+            </Button>
+            {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
           </Form>
         </InputPanel>
         <OutputPanel>
           <h2>OUTPUT</h2>
-          <TextArea
-            readOnly
-            value={generatedLyrics}
-            placeholder="Generated lyrics will appear here..."
-          />
+          <LyricsDisplay>
+            {generatedLyrics.split('\n').map((line, i) => (
+              <div key={i}>
+                {line.split(' ').map((word, j) => {
+                  const isHighlight =
+                    highlightInfo &&
+                    highlightInfo.lineIdx === i &&
+                    highlightInfo.wordIdx === j &&
+                    highlightInfo.word === word;
+                  return (
+                    <span
+                      key={j}
+                      style={isHighlight ? { color: 'red', fontWeight: 'bold' } : {}}
+                    >
+                      {word}
+                      {j !== line.split(' ').length - 1 ? ' ' : ''}
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+          </LyricsDisplay>
+          <Button
+            type="button"
+            onClick={handleReplaceWord}
+            disabled={!selectedWord || replaceLoading}
+            style={{ marginTop: '1rem', backgroundColor: selectedWord ? 'black' : '#ccc' }}
+          >
+            {replaceLoading ? 'AI로 교체 중...' : 'AI로 단어 바꾸기'}
+          </Button>
+          {replaceError && <p style={{ color: 'red', marginTop: '0.5rem' }}>{replaceError}</p>}
         </OutputPanel>
       </Content>
     </PageContainer>

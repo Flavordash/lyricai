@@ -9,7 +9,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY);
 
 app.use('/generate-lyrics', lyricsGenerator);
 

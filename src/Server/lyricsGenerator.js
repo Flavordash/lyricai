@@ -1,15 +1,11 @@
 import express from 'express';
-import OpenAI from 'openai';
-import syllable from 'syllable';
+import axios from 'axios';
+import { syllable } from 'syllable';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const router = express.Router();
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, 
-});
 
 // Function to estimate syllables per line based on BPM
 const getSyllablesPerLine = (bpm) => {
@@ -44,34 +40,82 @@ const adjustLyricsToBPM = (lyrics, bpm) => {
 router.post('/', async (req, res) => {
   console.log('Request received:', req.body);
 
-  const { bpm, theme, keywords, referenceArtist } = req.body;  // Removed metre
+  const { bpm, theme, keywords, referenceArtist, genre, metre } = req.body;
 
   try {
-    // Generate lyrics WITHOUT mentioning BPM or Metre
-    const response = await client.chat.completions.create({
-      model: 'ft:gpt-4o-mini:your_model_name',  
-      messages: [
-        { role: 'system', content: 'You are a fine-tuned AI lyricist. Generate high-quality lyrics based on theme, reference artist style, and keywords.' },
-        {
-          role: 'user',
-          content: `
-            Write lyrics in the style of ${referenceArtist}.
-            Theme: ${theme}.
-            Keywords: ${keywords.join(', ')}.
-          `,
-        },
-      ],
-    });
+    // Format keywords if it's an array or string
+    const keywordsFormatted = Array.isArray(keywords) ? keywords.join(', ') : keywords;
 
-    let generatedLyrics = response.choices[0].message.content.trim();
+    // DeepSeek API 프롬프트 구성
+    const systemPrompt = 'You are an expert songwriter and lyricist.';
+    const userPrompt = `Write song lyrics with the following specifications:\n- Style similar to ${referenceArtist || 'a contemporary artist'}\n- Theme: ${theme || 'love and relationships'}\n- Genre: ${genre || 'pop'}\n- Including these keywords: ${keywordsFormatted || 'emotion, feeling'}\n- Suitable for ${metre || '4/4'} time signature\n\nWrite only the lyrics without any explanations or additional text.`;
+
+    const response = await axios.post(
+      'https://api.deepseek.com/chat/completions',
+      {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: false,
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 500
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+
+    let generatedLyrics = response.data.choices[0].message.content.trim();
 
     // Adjust lyrics to match BPM AFTER AI generates them
     const adjustedLyrics = adjustLyricsToBPM(generatedLyrics, bpm);
 
     res.json({ lyrics: adjustedLyrics });
   } catch (error) {
-    console.error('Error generating lyrics:', error);
+    console.error('Error generating lyrics:', error?.response?.data || error);
     res.status(500).json({ error: 'Failed to generate lyrics' });
+  }
+});
+
+// 단어 교체 + 라임 맞춤 엔드포인트
+router.post('/replace-word', async (req, res) => {
+  const { originalLyrics, selectedWord, lineText } = req.body;
+  try {
+    const systemPrompt = 'You are an expert songwriter and lyricist.';
+    const userPrompt = `In the following lyric line, replace the word "${selectedWord}" with a word that has a similar meaning and rhymes with the end of the line. Only return the new word, nothing else.\n\nLyric line: ${lineText}`;
+
+    const response = await axios.post(
+      'https://api.deepseek.com/chat/completions',
+      {
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: false,
+        temperature: 0.7,
+        top_p: 0.9,
+        max_tokens: 10
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
+        }
+      }
+    );
+
+    const newWord = response.data.choices[0].message.content.trim();
+    res.json({ newWord });
+  } catch (error) {
+    console.error('Error replacing word:', error?.response?.data || error);
+    res.status(500).json({ error: 'Failed to replace word' });
   }
 });
 
