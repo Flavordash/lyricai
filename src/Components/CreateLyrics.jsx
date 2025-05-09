@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import LyricsEditor from './LyricsEditor';
+
 
 const PageContainer = styled.div`
   display: flex;
@@ -99,31 +101,7 @@ const Button = styled.button`
   }
 `;
 
-const TextArea = styled.textarea`
-  flex: 1;
-  width: 100%;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  resize: none;
-  background-color: #fff;
-  box-sizing: border-box;
-`;
 
-const LyricsDisplay = styled.div`
-  flex: 1;
-  width: 100%;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  background-color: #fff;
-  box-sizing: border-box;
-  min-height: 200px;
-  white-space: pre-wrap;
-  overflow-y: auto;
-  font-family: inherit;
-  font-size: 1rem;
-`;
 
 function CreateLyrics() {
   const [bpm, setBpm] = useState('');
@@ -138,10 +116,10 @@ function CreateLyrics() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [replaceLoading, setReplaceLoading] = useState(false);
-  const [replaceError, setReplaceError] = useState('');
+  const [setReplaceLoading] = useState(false);
+  const [setReplaceError] = useState('');
 
-  const [highlightInfo, setHighlightInfo] = useState(null);
+  const [setHighlightInfo] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,12 +160,6 @@ function CreateLyrics() {
     }
   };
 
-  // 가사 편집창에서 텍스트 선택 시 선택된 단어 추출
-  const handleSelection = (e) => {
-    const textarea = e.target;
-    const selection = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
-    setSelectedWord(selection);
-  };
 
   // 선택된 단어가 포함된 줄(lineText) 추출 함수
   const getLineWithSelectedWord = () => {
@@ -323,40 +295,21 @@ function CreateLyrics() {
             {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
           </Form>
         </InputPanel>
-        <OutputPanel>
-          <h2>OUTPUT</h2>
-          <LyricsDisplay>
-            {generatedLyrics.split('\n').map((line, i) => (
-              <div key={i}>
-                {line.split(' ').map((word, j) => {
-                  const isHighlight =
-                    highlightInfo &&
-                    highlightInfo.lineIdx === i &&
-                    highlightInfo.wordIdx === j &&
-                    highlightInfo.word === word;
-                  return (
-                    <span
-                      key={j}
-                      style={isHighlight ? { color: 'red', fontWeight: 'bold' } : {}}
-                    >
-                      {word}
-                      {j !== line.split(' ').length - 1 ? ' ' : ''}
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </LyricsDisplay>
-          <Button
-            type="button"
-            onClick={handleReplaceWord}
-            disabled={!selectedWord || replaceLoading}
-            style={{ marginTop: '1rem', backgroundColor: selectedWord ? 'black' : '#ccc' }}
-          >
-            {replaceLoading ? 'AI로 교체 중...' : 'AI로 단어 바꾸기'}
-          </Button>
-          {replaceError && <p style={{ color: 'red', marginTop: '0.5rem' }}>{replaceError}</p>}
-        </OutputPanel>
+     <OutputPanel>
+  <h2>OUTPUT</h2>
+  {isLoading ? (
+    <p style={{ color: '#666' }}>가사 생성 중입니다... 🎵</p>
+  ) : (
+    <LyricsEditor
+      lyrics={generatedLyrics}
+      onUpdateLyrics={(newLyricsHTML) => {
+        setGeneratedLyrics(newLyricsHTML);
+      }}
+    />
+  )}
+</OutputPanel>
+
+
       </Content>
     </PageContainer>
   );
