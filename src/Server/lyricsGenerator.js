@@ -118,5 +118,6 @@ router.post('/replace-word', async (req, res) => {
     res.status(500).json({ error: 'Failed to replace word' });
   }
 });
+console.log('DEEPSEEK_API_KEY loaded:', process.env.DEEPSEEK_API_KEY);
 
 export default router;

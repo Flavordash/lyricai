@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import LyricsEditor from './LyricsEditor';
 
-
 const PageContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 2rem;
   background-color: #f8f9fa;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
 `;
 
 const Header = styled.header`
@@ -19,9 +18,7 @@ const Header = styled.header`
   width: 100%;
   padding: 1rem 0;
   background-color: #f8f9fa;
- 
 `;
-
 
 const Title = styled.h1`
   font-size: 2rem;
@@ -33,29 +30,33 @@ const Title = styled.h1`
 
 const Content = styled.div`
   display: flex;
-  flex: 1;
+  justify-content: center;
   width: 100%;
   max-width: 1200px;
   margin-top: 2rem;
+  gap: 2rem;
 `;
 
 const Panel = styled.div`
+  width: 100%;
   flex: 1;
   padding: 2rem;
   border-radius: 10px;
-  height: 80vh;
-  overflow: hidden;
+  max-height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 `;
 
 const InputPanel = styled(Panel)`
   background-color: #ffe6e6;
-  margin-right: 1rem;
 `;
 
 const OutputPanel = styled(Panel)`
   background-color: #e6f0ff;
+  min-height: 300px;
+  border: 1px solid #ccc;
 `;
 
 const Form = styled.form`
@@ -65,7 +66,7 @@ const Form = styled.form`
 
 const FormGroup = styled.div`
   margin-bottom: 1rem;
-  text-align: start; /* Align titles to the start */
+  text-align: start;
 `;
 
 const Label = styled.label`
@@ -101,8 +102,6 @@ const Button = styled.button`
   }
 `;
 
-
-
 function CreateLyrics() {
   const [bpm, setBpm] = useState('');
   const [theme, setTheme] = useState('');
@@ -110,30 +109,21 @@ function CreateLyrics() {
   const [genre, setGenre] = useState('');
   const [metre, setMetre] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [generatedLyrics, setGeneratedLyrics] = useState('');
-  const [selectedWord, setSelectedWord] = useState('');
-
+  const [lyrics, setLyrics] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const [setReplaceLoading] = useState(false);
-  const [setReplaceError] = useState('');
-
-  const [setHighlightInfo] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-    
+    setLyrics('Generating lyrics... 🎵');
+
     try {
-      // The API endpoint - change to your server address if different
-      const apiUrl = '/generate-lyrics';
-      
-      const response = await fetch(apiUrl, {
+      const response = await fetch('/generate-lyrics', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           bpm: parseInt(bpm, 10) || 100,
@@ -142,81 +132,28 @@ function CreateLyrics() {
           keywords,
           genre,
           metre
-        }),
+        })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to generate lyrics');
       }
-      
+
       const data = await response.json();
-      setGeneratedLyrics(data.lyrics);
+      setLyrics(data.lyrics);
     } catch (err) {
       console.error('Error:', err);
       setError('An error occurred while generating lyrics. Please try again.');
-      setGeneratedLyrics('');
+      setLyrics('');
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  // 선택된 단어가 포함된 줄(lineText) 추출 함수
-  const getLineWithSelectedWord = () => {
-    if (!selectedWord) return '';
-    const lines = generatedLyrics.split('\n');
-    return lines.find(line => line.includes(selectedWord)) || '';
-  };
-
-  // AI로 단어 바꾸기 버튼 클릭 시
-  const handleReplaceWord = async () => {
-    if (!selectedWord) return;
-    setReplaceLoading(true);
-    setReplaceError('');
-    const lineText = getLineWithSelectedWord();
-    try {
-      const response = await fetch('/generate-lyrics/replace-word', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          originalLyrics: generatedLyrics,
-          selectedWord,
-          lineText
-        })
-      });
-      if (!response.ok) throw new Error('Failed to replace word');
-      const data = await response.json();
-      const newWord = data.newWord;
-      // 해당 줄에서 단어 교체
-      const lines = generatedLyrics.split('\n');
-      const newLines = lines.map((line, idx) => {
-        if (line === lineText) {
-          // 교체된 단어의 인덱스 찾기 (첫 번째만)
-          const wordArr = line.split(' ');
-          const wordIdx = wordArr.findIndex(w => w === selectedWord);
-          if (wordIdx !== -1) {
-            wordArr[wordIdx] = newWord;
-            setHighlightInfo({ lineIdx: idx, wordIdx, word: newWord });
-            return wordArr.join(' ');
-          }
-        }
-        return line;
-      });
-      setGeneratedLyrics(newLines.join('\n'));
-      setSelectedWord('');
-    } catch (err) {
-      setReplaceError('AI 단어 교체에 실패했습니다.');
-    } finally {
-      setReplaceLoading(false);
-    }
-  };
-
   return (
     <PageContainer>
-     
       <Header>
-        
-        <Title>LYRICAi</Title>
+        <Title>LyricAi</Title>
       </Header>
       <Content>
         <InputPanel>
@@ -224,51 +161,23 @@ function CreateLyrics() {
           <Form onSubmit={handleSubmit}>
             <FormGroup>
               <Label htmlFor="bpm">BPM</Label>
-              <Input
-                id="bpm"
-                type="number"
-                placeholder="Numbers Only"
-                value={bpm}
-                onChange={(e) => setBpm(e.target.value)}
-              />
+              <Input id="bpm" type="number" value={bpm} onChange={(e) => setBpm(e.target.value)} placeholder="Numbers only" />
             </FormGroup>
             <FormGroup>
               <Label htmlFor="theme">Theme</Label>
-              <Input
-                id="theme"
-                type="text"
-                placeholder="What is the Theme of your song?"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-              />
+              <Input id="theme" type="text" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="What is the theme of your song?" />
             </FormGroup>
             <FormGroup>
               <Label htmlFor="reference">Reference (Artist)</Label>
-              <Input
-                id="reference"
-                type="text"
-                placeholder="Optional"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-              />
+              <Input id="reference" type="text" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Optional" />
             </FormGroup>
             <FormGroup>
               <Label htmlFor="keywords">Keywords</Label>
-              <Input
-                id="keywords"
-                type="text"
-                placeholder="Comma-separated keywords"
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-              />
+              <Input id="keywords" type="text" value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Comma-separated keywords" />
             </FormGroup>
             <FormGroup>
               <Label htmlFor="genre">Genre</Label>
-              <Select
-                id="genre"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-              >
+              <Select id="genre" value={genre} onChange={(e) => setGenre(e.target.value)}>
                 <option value="">Select a genre</option>
                 <option value="Pop">Pop</option>
                 <option value="Rock">Rock</option>
@@ -278,11 +187,7 @@ function CreateLyrics() {
             </FormGroup>
             <FormGroup>
               <Label htmlFor="metre">Metre</Label>
-              <Select
-                id="metre"
-                value={metre}
-                onChange={(e) => setMetre(e.target.value)}
-              >
+              <Select id="metre" value={metre} onChange={(e) => setMetre(e.target.value)}>
                 <option value="">Select metre</option>
                 <option value="4/4">4/4</option>
                 <option value="3/4">3/4</option>
@@ -295,21 +200,13 @@ function CreateLyrics() {
             {error && <p style={{ color: 'red', marginTop: '1rem' }}>{error}</p>}
           </Form>
         </InputPanel>
-     <OutputPanel>
-  <h2>OUTPUT</h2>
-  {isLoading ? (
-    <p style={{ color: '#666' }}>가사 생성 중입니다... 🎵</p>
-  ) : (
-    <LyricsEditor
-      lyrics={generatedLyrics}
-      onUpdateLyrics={(newLyricsHTML) => {
-        setGeneratedLyrics(newLyricsHTML);
-      }}
-    />
-  )}
-</OutputPanel>
-
-
+        <OutputPanel>
+          <h2>OUTPUT</h2>
+          <LyricsEditor lyrics={lyrics} onUpdateLyrics={setLyrics} />
+          <p style={{ marginTop: '1.5rem', fontSize: '0.9rem', color: '#555' }}>
+  * Block a word and click the Rhymer to replace it with a rhyming word.
+</p>
+        </OutputPanel>
       </Content>
     </PageContainer>
   );

@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 
 const EditableDiv = styled.div`
   width: 100%;
-  height: 500px;
+  height: 450px;
   padding: 1rem;
   border: 1px solid #ccc;
   border-radius: 5px;
@@ -20,10 +20,11 @@ function LyricsEditor({ lyrics, onUpdateLyrics }) {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (divRef.current && !divRef.current.innerText.trim()) {
-      divRef.current.innerHTML = lyrics;
+    if (divRef.current) {
+      divRef.current.innerHTML = lyrics || 'Lyrics will appear here once generated 🎵';
     }
   }, [lyrics]);
+
 
   const handleReplaceWithRhyme = async () => {
     const selection = window.getSelection();
@@ -46,12 +47,20 @@ function LyricsEditor({ lyrics, onUpdateLyrics }) {
       });
 
       const data = await res.json();
-      const replaced = `<span style="color: red;">${data.newWord}</span>`;
+      const replaced = document.createElement('span');
+      replaced.style.color = 'red';
+      replaced.textContent = data.newWord;
 
       range.deleteContents();
-      const el = document.createElement('span');
-      el.innerHTML = replaced;
-      range.insertNode(el);
+      range.insertNode(replaced);
+
+      // Collapse selection after insert to avoid nested issues
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.setStartAfter(replaced);
+      newRange.collapse(true);
+      selection.addRange(newRange);
 
       onUpdateLyrics(divRef.current.innerHTML);
     } catch (err) {
@@ -72,18 +81,10 @@ function LyricsEditor({ lyrics, onUpdateLyrics }) {
       />
       <button
         onClick={handleReplaceWithRhyme}
-        style={{
-          marginTop: '1rem',
-          padding: '0.5rem 1rem',
-          backgroundColor: isEditing ? '#999' : 'black',
-          color: 'white',
-          border: 'none',
-          borderRadius: '5px',
-          cursor: isEditing ? 'not-allowed' : 'pointer'
-        }}
+        style={{ marginTop: '1rem', padding: '0.5rem 1rem', backgroundColor: isEditing ? '#999' : 'black', color: 'white', border: 'none', borderRadius: '5px', cursor: isEditing ? 'not-allowed' : 'pointer' }}
         disabled={isEditing}
       >
-        {isEditing ? 'AI 편집 중...' : '선택한 단어를 라임으로 교체'}
+        {isEditing ? 'Editing with AI...' : 'Rhymer'}
       </button>
     </div>
   );
